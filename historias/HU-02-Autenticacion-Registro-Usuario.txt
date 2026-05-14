@@ -1,0 +1,155 @@
+HU-02 - Registro seguro de usuario
+
+Como usuario nuevo,
+quiero registrar una cuenta con mis datos básicos,
+para poder autenticarme posteriormente en el sistema con permisos iniciales predeterminados.
+
+## Historia de Usuario Enriquecida
+
+### Contexto y Objetivo de Negocio
+El sistema debe permitir que un nuevo usuario cree una cuenta segura para acceder posteriormente a la plataforma con credenciales válidas.
+
+### Descripción Funcional Detallada
+El usuario debe completar un request de registro con sus datos básicos. El sistema debe validar los datos obligatorios, comprobar el formato del correo, verificar la complejidad mínima de la contraseña, confirmar que el correo no exista previamente, cifrar la contraseña con BCrypt y guardar el usuario como activo con rol inicial `VIEWER`. Además, debe asignar el permiso inicial `REPORT_READ` al usuario llamando al servicio de autorización (authorization-service). La respuesta nunca debe incluir la contraseña ni su hash. Si el correo ya existe, los datos no son válidos o authorization-service falla, el sistema debe devolver un error apropiado.
+
+### Criterios de Aceptación
+- [ ] El usuario puede registrarse mediante `POST /api/auth/register` con datos válidos.
+- [ ] El sistema valida campos obligatorios, formato de correo y política de contraseña.
+- [ ] Si el correo ya existe, el sistema responde con HTTP 409.
+- [ ] Si los datos son inválidos, el sistema responde con HTTP 400 con detalle de validación.
+- [ ] La contraseña se almacena cifrada con BCrypt y nunca en texto plano.
+- [ ] El usuario se crea con estado `ACTIVE` y rol inicial `VIEWER`.
+- [ ] El sistema asigna el permiso inicial `REPORT_READ` al usuario mediante el servicio de autorización.
+- [ ] Si la asignación de permiso falla, se revierte la creación del usuario (transacción atómica).
+- [ ] La respuesta de éxito incluye datos básicos del usuario sin exponer información sensible.
+
+### Casos Límite y Validaciones
+- Caso límite: campos obligatorios vacíos; el sistema debe rechazar el registro.
+- Caso límite: correo con formato inválido; el sistema debe impedir el alta.
+- Caso límite: contraseña débil; el sistema debe rechazarla según la política definida.
+- Caso límite: correo duplicado; el sistema debe prevenir la creación de cuentas repetidas.
+- Validación: si existe confirmación de contraseña, ambas deben coincidir.
+- Validación: la restricción única del correo debe existir también a nivel de base de datos.
+
+### Requisitos No Funcionales Relevantes
+- Seguridad: hashing seguro de contraseñas, validación de entrada y protección contra registros maliciosos.
+- Rendimiento: creación de usuario en tiempo razonable bajo carga normal.
+- UX / Accesibilidad: mensajes de error claros y formularios accesibles.
+- Observabilidad / Logging: registrar altas exitosas y fallidas sin almacenar datos sensibles.
+- Documentación API: configurar OpenAPI/Swagger para documentar este endpoint y el flujo de asignación inicial asociado.
+
+### Requisitos de Testing (alto nivel)
+- Pruebas unitarias: validación de campos, política de contraseña, detección de duplicados.
+- Pruebas de integración: persistencia del usuario, restricción única y manejo de errores.
+- Pruebas E2E: registro completo desde entrada válida hasta confirmación de creación.
+
+### Consideraciones Técnicas
+- Backend / API:
+  - `POST /api/auth/register`
+  - `AuthController`, `RegisterService`, `PasswordEncoderConfig`, `UserRepository`, `UserEntity`, `RoleEntity`, `RegisterRequest`, `RegisterResponse`, `GlobalExceptionHandler`
+- Persistencia:
+  - transacciones en la capa de servicio y restricción única para correo.
+- Errores:
+  - HTTP 400 para validación, HTTP 409 para correo duplicado.
+
+Objetivo técnico:
+Implementar un endpoint de registro en Java 17 con Spring Boot que cree usuarios de forma segura, almacenando la contraseña cifrada con BCrypt.
+
+Alcance funcional:
+- Crear endpoint POST /api/auth/register.
+- Validar datos obligatorios.
+- Validar formato de correo.
+- Validar complejidad mínima de contraseña.
+- Verificar que el correo no exista previamente.
+- Cifrar contraseña con BCrypt.
+- Guardar usuario activo con rol inicial USER.
+- Retornar respuesta sin contraseña.
+
+Buenas prácticas esperadas:
+- Usar DTOs para request y response.
+- Usar jakarta.validation.
+- No exponer passwordHash en respuestas.
+- Usar transacciones en la capa de servicio.
+- Evitar duplicidad de correos con validación lógica y restricción única en base de datos.
+- Manejar errores de validación con HTTP 400.
+- Manejar correo duplicado con HTTP 409.
+- Documentar el contrato con OpenAPI/Swagger incluyendo respuestas de éxito, validación y conflicto.
+
+Endpoint:
+POST /api/auth/register
+
+Headers:
+Content-Type: application/json
+
+Ejemplo de entrada exitosa:
+{
+  "name": "Oscar Demo",
+  "email": "oscar.demo@email.com",
+  "password": "Password123!"
+}
+
+Ejemplo de salida exitosa HTTP 201:
+{
+  "id": 1,
+  "name": "Oscar Demo",
+  "email": "oscar.demo@email.com",
+  "status": "ACTIVE",
+  "roles": ["USER"]
+}
+
+Ejemplo de entrada inválida:
+{
+  "name": "",
+  "email": "correo-invalido",
+  "password": "123"
+}
+
+Ejemplo de salida con error HTTP 400:
+{
+  "timestamp": "2026-05-13T10:35:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Error de validación",
+  "details": [
+    "name: no debe estar vacío",
+    "email: debe tener formato válido",
+    "password: debe cumplir la política de seguridad"
+  ],
+  "path": "/api/auth/register"
+}
+
+Ejemplo de correo duplicado HTTP 409:
+{
+  "timestamp": "2026-05-13T10:36:00",
+  "status": 409,
+  "error": "Conflict",
+  "message": "El correo ya se encuentra registrado",
+  "path": "/api/auth/register"
+}
+
+Reglas de negocio:
+- El correo debe ser único.
+- La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.
+- Todo usuario nuevo inicia con estatus ACTIVE y rol VIEWER.
+- Todo usuario nuevo recibe el permiso inicial REPORT_READ via authorization-service.
+- La contraseña debe almacenarse únicamente como hash.
+- La operación debe ser atómica: si falla la asignación de permiso, se revierte el registro.
+
+Criterios de aceptación:
+1. Dado un correo no registrado y datos válidos, cuando se invoque POST /api/auth/register, entonces se debe crear el usuario con rol VIEWER, asignarle REPORT_READ en authorization-service y responder HTTP 201.
+2. Dado un correo ya existente, cuando se intente registrar, entonces se debe responder HTTP 409.
+3. Dado un request con datos inválidos, cuando se invoque el endpoint, entonces se debe responder HTTP 400 con detalle de validaciones.
+4. Si authorization-service no responde, se debe revertir el registro y responder HTTP 503 o 500.
+5. La contraseña almacenada debe estar cifrada con BCrypt.
+6. La respuesta nunca debe incluir la contraseña ni el hash.
+
+Sugerencia de estructura técnica:
+- AuthController
+- RegisterService
+- PasswordEncoderConfig
+- UserRepository
+- UserEntity
+- RoleEntity
+- RegisterRequest
+- RegisterResponse
+- GlobalExceptionHandler
