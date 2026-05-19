@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+contracts/
+jira/
+mcp/
+openspec/
+.codex
+.agents
