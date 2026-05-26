@@ -29,8 +29,11 @@ Opcionalmente se consultan los permisos del usuario mediante el authorization-se
 Se devuelve una respuesta con la información de identidad y permisos.
 Respuesta esperada (200 OK)
 
+Importante: según el contrato actual del servicio de autenticación, el JWT **no contiene el userId**, por lo tanto esta información **no debe formar parte de la respuesta** del endpoint.
+
+Ejemplo de respuesta:
+
 {
-"userId": 12,
 "username": "demo.user",
 "permissions": [
 "REPORT:READ"
@@ -53,7 +56,7 @@ Entonces el sistema responde con la identidad del usuario autenticado.
 
 Dado un token válido
 Cuando se procesa la petición
-Entonces el sistema debe extraer correctamente el userId contenido en el JWT.
+Entonces el sistema debe extraer correctamente el username contenido en el JWT.
 
 Dado un usuario con permisos asociados
 Cuando el endpoint responde
@@ -63,7 +66,15 @@ Dado un request sin token
 Cuando se invoca el endpoint
 Entonces el sistema debe responder 401 Unauthorized.
 
-El endpoint no debe exponer información sensible como contraseñas o hashes.
+El endpoint no debe exponer información sensible como contraseñas, hashes o identificadores internos no presentes en el JWT.
+
+OpenAPI / Documentación
+
+La especificación OpenAPI debe actualizarse para:
+
+- Declarar el esquema de seguridad **BearerAuth (JWT)**.
+- Permitir enviar el header `Authorization` desde Swagger/OpenAPI (`Authorization: Bearer <token>`).
+- Habilitar la funcionalidad **Authorize** para poder probar el endpoint `/api/auth/me` directamente desde la UI de Swagger.
 
 Valor para la demo
 

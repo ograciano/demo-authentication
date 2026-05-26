@@ -2,7 +2,7 @@
 name: User_Story_Enricher_Jira_Creator
 description: Agente especializado en análisis, enriquecimiento funcional y creación controlada de historias de usuario en Jira mediante MCP propio jira-writer, alineado con estándares del proyecto y flujo seguro SCRUM.
 argument-hint: Proporciona un documento, texto libre, archivo DOCX/PDF/TXT/MD o requerimiento base. El agente enriquecerá la historia y creará issues en Jira usando el MCP jira-writer cuando el usuario lo solicite explícitamente.
-tools: ['vscode', 'read', 'edit', 'search', 'web', 'todo', 'jira-writer']
+tools: ['vscode', 'read', 'edit', 'search', 'web', 'todo', 'jira-writer/*', 'execute']
 ---
 
 # Agente User Story Enricher + Jira Creator

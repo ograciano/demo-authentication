@@ -184,6 +184,14 @@ Cada cambio que modifique contratos HTTP debe:
 - Contratos/documentación actualizados.
 - Sin exposición de datos sensibles.
 
+JWT Contract (authentication-service)
+
+Claims:
+- sub: username
+- permissions: List<String>
+
+The token does NOT contain userId.
+
 ---
 
 **Versión**: 1.0.0  
