@@ -1,13 +1,8 @@
 package com.vass.authentication.api.handler;
 
-import com.vass.authentication.api.dto.ApiErrorResponse;
-import com.vass.authentication.domain.exception.DuplicateEmailException;
-import com.vass.authentication.domain.exception.InactiveUserException;
-import com.vass.authentication.domain.exception.InvalidCredentialsException;
-import com.vass.authentication.domain.exception.PermissionBootstrapException;
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,6 +10,16 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.vass.authentication.api.dto.ApiErrorResponse;
+import com.vass.authentication.domain.exception.AccountLockedException;
+import com.vass.authentication.domain.exception.DuplicateEmailException;
+import com.vass.authentication.domain.exception.InactiveUserException;
+import com.vass.authentication.domain.exception.InvalidCredentialsException;
+import com.vass.authentication.domain.exception.PermissionBootstrapException;
+import com.vass.authentication.domain.exception.RateLimitExceededException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -57,6 +62,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handlePermissionBootstrap(PermissionBootstrapException ex,
                                                                        HttpServletRequest request) {
         return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountLocked(AccountLockedException ex,
+                                                                  HttpServletRequest request) {
+        return build(HttpStatus.LOCKED, "Acceso temporalmente restringido", request);
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleRateLimit(RateLimitExceededException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, "Demasiadas solicitudes, intente más tarde", request);
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {

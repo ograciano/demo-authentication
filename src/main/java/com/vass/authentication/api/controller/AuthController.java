@@ -1,24 +1,27 @@
 package com.vass.authentication.api.controller;
 
-import com.vass.authentication.api.dto.ApiErrorResponse;
-import com.vass.authentication.api.dto.LoginRequest;
-import com.vass.authentication.api.dto.LoginResponse;
-import com.vass.authentication.api.dto.RegisterRequest;
-import com.vass.authentication.api.dto.RegisterResponse;
-import com.vass.authentication.application.service.AuthService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.vass.authentication.api.dto.ApiErrorResponse;
+import com.vass.authentication.api.dto.LoginRequest;
+import com.vass.authentication.api.dto.LoginResponse;
+import com.vass.authentication.api.dto.RegisterRequest;
+import com.vass.authentication.api.dto.RegisterResponse;
+import com.vass.authentication.application.service.AuthService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -39,11 +42,23 @@ public class AuthController {
                     @ApiResponse(responseCode = "200", description = "Autenticación exitosa", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Payload inválido", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class), examples = @ExampleObject(value = "{\"timestamp\":\"2026-05-13T10:30:00Z\",\"status\":400,\"error\":\"Bad Request\",\"message\":\"email must be a well-formed email address\",\"path\":\"/api/auth/login\"}"))),
                     @ApiResponse(responseCode = "401", description = "Credenciales inválidas", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class), examples = @ExampleObject(value = "{\"timestamp\":\"2026-05-13T10:30:00Z\",\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Credenciales inválidas\",\"path\":\"/api/auth/login\"}"))),
-                    @ApiResponse(responseCode = "403", description = "Usuario inactivo", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                    @ApiResponse(responseCode = "403", description = "Usuario inactivo", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "423", description = "Cuenta bloqueada por exceso de intentos fallidos", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class), examples = @ExampleObject(value = "{\"timestamp\":\"2026-05-19T10:30:00Z\",\"status\":423,\"error\":\"Locked\",\"message\":\"Acceso temporalmente restringido\",\"path\":\"/api/auth/login\"}"))),
+                    @ApiResponse(responseCode = "429", description = "Rate limit excedido", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class), examples = @ExampleObject(value = "{\"timestamp\":\"2026-05-19T10:30:00Z\",\"status\":429,\"error\":\"Too Many Requests\",\"message\":\"Demasiadas solicitudes, intente más tarde\",\"path\":\"/api/auth/login\"}")))
             }
     )
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                               HttpServletRequest httpRequest) {
+        String clientIp = extractClientIp(httpRequest);
+        return ResponseEntity.ok(authService.login(request, clientIp));
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @PostMapping("/register")

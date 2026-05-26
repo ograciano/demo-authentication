@@ -1,28 +1,17 @@
 package com.vass.authentication.api.controller;
 
-import static org.hamcrest.Matchers.emptyOrNullString;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.startsWith;
-import static org.springframework.http.HttpMethod.GET;
-import static org.springframework.http.HttpMethod.POST;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.http.HttpMethod.*;
+import static org.springframework.http.MediaType.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.jayway.jsonpath.JsonPath;
-import com.vass.authentication.infrastructure.persistence.entity.UserEntity;
-import com.vass.authentication.infrastructure.persistence.repository.UserRepository;
-import com.vass.authentication.infrastructure.security.JwtService;
-import io.jsonwebtoken.Claims;
 import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +24,14 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.RestTemplate;
+
+import com.jayway.jsonpath.JsonPath;
+import com.vass.authentication.application.service.LoginAttemptService;
+import com.vass.authentication.infrastructure.persistence.entity.UserEntity;
+import com.vass.authentication.infrastructure.persistence.repository.UserRepository;
+import com.vass.authentication.infrastructure.security.JwtService;
+
+import io.jsonwebtoken.Claims;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -53,11 +50,15 @@ class AuthControllerIntegrationTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private LoginAttemptService loginAttemptService;
+
     private MockRestServiceServer mockServer;
 
     @BeforeEach
     void setUp() {
         mockServer = MockRestServiceServer.bindTo(restTemplate).ignoreExpectOrder(true).build();
+        loginAttemptService.resetAll();
     }
 
     @Test
@@ -398,5 +399,54 @@ class AuthControllerIntegrationTest {
         Claims claims = jwtService.parseClaims(accessToken);
         org.assertj.core.api.Assertions.assertThat(claims.get("permissions", List.class))
                 .containsExactlyElementsOf(expectedPermissions);
+    }
+
+    // --- Tests 423 / 429 ---
+
+    @Test
+    void testLogin_AccountLocked_Returns423() throws Exception {
+        String lockedEmail = "oscar.demo@email.com";
+
+        for (int i = 0; i < 5; i++) {
+            loginAttemptService.recordFailure(lockedEmail);
+        }
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "Password123!"
+                                }
+                                """.formatted(lockedEmail)))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.status", is(423)))
+                .andExpect(jsonPath("$.message", is("Acceso temporalmente restringido")))
+                .andExpect(jsonPath("$.path", is("/api/auth/login")));
+    }
+
+    @Test
+    void testLogin_SuccessAfterFailures_ResetsLockoutCounter() throws Exception {
+        String email = "oscar.demo@email.com";
+
+        loginAttemptService.recordFailure(email);
+        loginAttemptService.recordFailure(email);
+
+        Long userId = userRepository.findByEmailIgnoreCase(email).orElseThrow().getId();
+        mockServer.expect(requestTo("http://authorization-service/api/permissions/users/" + userId))
+                .andExpect(method(GET))
+                .andRespond(withSuccess("""
+                        {"userId":%d,"permissions":[],"timestamp":"2026-05-19T12:00:00Z"}
+                        """.formatted(userId), APPLICATION_JSON));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "password": "Password123!"}
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenType", is("Bearer")));
+
+        mockServer.verify();
     }
 }

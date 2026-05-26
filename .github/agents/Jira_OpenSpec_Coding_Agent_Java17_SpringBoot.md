@@ -2,7 +2,7 @@
 name: Jira_OpenSpec_Coding_Agent_Java17_SpringBoot
 description: Agente especializado en codificación backend Java 17 / Spring Boot guiada por Jira y OpenSpec. Lee automáticamente tareas asignadas en Jira mediante el MCP jira-writer, genera propuestas OpenSpec, implementa historias de autenticación/autorización y actualiza Jira con comentarios y transiciones de workflow.
 argument-hint: Solicita una propuesta o implementación sin necesidad de indicar Jira explícitamente. Ejemplo: "Hazme una propuesta", "toma la primera tarea pendiente", "aplica la propuesta OpenSpec" o "implementa la siguiente historia".
-tools: [vscode, execute, read, edit, search, web, todo]
+tools: [vscode, execute, read, edit, search, web, todo, "jira-writer/*"]
 ---
 
 # Jira OpenSpec Coding Agent - Java 17 / Spring Boot

@@ -1,0 +1,80 @@
+HU-05 – Endpoint de introspección del token (/api/auth/me)
+
+Historia de Usuario
+Como cliente autenticado del sistema
+quiero consultar un endpoint que me devuelva la identidad y permisos asociados a mi token JWT
+para poder verificar quién soy dentro del sistema y qué autorizaciones tengo actualmente.
+
+Contexto
+El servicio de authentication ya permite registrar usuarios, autenticarlos mediante login y emitir tokens JWT. Sin embargo, actualmente no existe un endpoint que permita al cliente o a una herramienta de demo inspeccionar fácilmente el contenido del token autenticado en una llamada segura.
+
+Este endpoint será útil para:
+
+facilitar la comprensión del flujo de autenticación en demos
+verificar la identidad del usuario autenticado
+visualizar los permisos asociados al usuario
+demostrar cómo el sistema interpreta el JWT recibido en la petición
+La operación utilizará el token JWT enviado en el header Authorization: Bearer <token>.
+
+Endpoint propuesto
+
+GET /api/auth/me
+
+Comportamiento esperado
+
+El endpoint requiere autenticación mediante JWT válido.
+El sistema lee el token enviado en el header Authorization.
+Se extrae del token la identidad del usuario autenticado.
+Opcionalmente se consultan los permisos del usuario mediante el authorization-service.
+Se devuelve una respuesta con la información de identidad y permisos.
+Respuesta esperada (200 OK)
+
+{
+"userId": 12,
+"username": "demo.user",
+"permissions": [
+"REPORT:READ"
+]
+}
+
+Errores esperados
+
+401 Unauthorized
+Token ausente, inválido o expirado.
+
+403 Forbidden
+El token es válido pero el usuario no está autorizado a acceder al recurso.
+
+Criterios de Aceptación
+
+Dado un usuario autenticado con un JWT válido
+Cuando invoca GET /api/auth/me
+Entonces el sistema responde con la identidad del usuario autenticado.
+
+Dado un token válido
+Cuando se procesa la petición
+Entonces el sistema debe extraer correctamente el userId contenido en el JWT.
+
+Dado un usuario con permisos asociados
+Cuando el endpoint responde
+Entonces deben mostrarse los permisos actualmente asignados.
+
+Dado un request sin token
+Cuando se invoca el endpoint
+Entonces el sistema debe responder 401 Unauthorized.
+
+El endpoint no debe exponer información sensible como contraseñas o hashes.
+
+Valor para la demo
+
+Este endpoint permite mostrar claramente el flujo completo:
+
+Registro → Login → Emisión de JWT → Uso del token → Consulta de identidad
+
+Escenario típico de demo:
+
+Registrar usuario
+Hacer login y obtener JWT
+Llamar /api/auth/me
+Mostrar identidad y permisos del usuario autenticado
+Esto permite visualizar de forma sencilla el funcionamiento del sistema de autenticación y autorización.
