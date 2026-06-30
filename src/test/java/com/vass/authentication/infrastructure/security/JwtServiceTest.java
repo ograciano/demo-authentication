@@ -11,7 +11,7 @@ class JwtServiceTest {
 
     @Test
     void testGenerateToken_ContainsRequiredClaimsAndExpiration() {
-        JwtService jwtService = new JwtService(new JwtProperties("01234567890123456789012345678901", 3600, 86400));
+        JwtService jwtService = new JwtService(new JwtProperties("01234567890123456789012345678901", 3600));
 
         String token = jwtService.generateToken("user@email.com", List.of("REPORT:READ"));
         Claims claims = jwtService.parseClaims(token);
