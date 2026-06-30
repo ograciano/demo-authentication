@@ -1,26 +1,201 @@
-Título: Implementación de Refresh Token para demo de autenticación
+Título: Flujo completo de Refresh Token y Renovación de JWT
 
-Descripción:
-Se requiere añadir soporte de refresh token en el microservicio de autenticación para mejorar la experiencia de sesión en la demo. Actualmente el sistema emite JWT de acceso, pero no cuenta con un mecanismo estándar para renovar credenciales sin volver a iniciar sesión.
+Objetivo funcional:
+Implementar un flujo completo de renovación de sesión basado en refresh token para el microservicio `demo-authentication`.
 
-Objetivo:
-Permitir que un usuario autenticado renueve su access token mediante un refresh token válido, sin exponer credenciales nuevamente.
+El sistema debe permitir que un usuario autenticado renueve su access token sin reenviar credenciales.
 
-Alcance funcional:
-- Generar refresh token al momento del login.
-- Exponer endpoint `POST /api/auth/refresh` para renovar el access token.
-- Validar expiración y firma del refresh token.
-- Mantener el access token de corta duración.
-- Alinear el contrato OpenAPI con el nuevo flujo.
-- Agregar pruebas unitarias e integración.
+---
 
-Criterios de aceptación:
-- Un usuario con refresh token válido obtiene un nuevo access token.
-- Un refresh token expirado o inválido devuelve error `401`.
-- El endpoint no expone información sensible.
-- La documentación Swagger/OpenAPI refleja el nuevo contrato.
+# Flujo funcional obligatorio
 
-Notas técnicas:
-- Seguir la arquitectura actual del proyecto.
-- Reutilizar el servicio JWT existente.
-- Aplicar validaciones y manejo de errores consistente.
+## Login
+
+Cuando el usuario se autentica correctamente mediante:
+
+POST /api/auth/login
+
+el sistema debe responder:
+
+{
+  "tokenType": "Bearer",
+  "accessToken": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
+  "expiresIn": 3600,
+  "refreshExpiresIn": 86400,
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "name": "Demo User"
+  }
+}
+
+---
+
+# Contrato obligatorio del refresh token
+
+## Endpoint
+
+POST /api/auth/refresh
+
+## Request
+
+{
+  "refreshToken": "jwt-refresh-token"
+}
+
+## Response exitosa
+
+{
+  "tokenType": "Bearer",
+  "accessToken": "nuevo-access-token",
+  "refreshToken": "nuevo-refresh-token",
+  "expiresIn": 3600,
+  "refreshExpiresIn": 86400
+}
+
+---
+
+# Reglas obligatorias
+
+## Access token
+
+Debe contener:
+
+- sub
+- permissions
+- iat
+- exp
+
+Debe tener expiración corta.
+
+## Refresh token
+
+Debe contener:
+
+- sub
+- tokenType=REFRESH
+- iat
+- exp
+
+Debe tener expiración mayor que el access token.
+
+No debe contener permisos detallados.
+
+---
+
+# Validaciones obligatorias
+
+Antes de generar nuevos tokens el sistema debe validar:
+
+1. Firma JWT.
+2. Expiración.
+3. Tipo de token REFRESH.
+4. Integridad del payload.
+5. Existencia del usuario.
+6. Usuario activo.
+
+---
+
+# Casos inválidos
+
+## Token expirado
+
+Debe responder 401 Unauthorized.
+
+## Token alterado
+
+Debe responder 401 Unauthorized.
+
+## Access token usado como refresh token
+
+Debe responder 401 Unauthorized.
+
+## Usuario inactivo
+
+Debe responder 401 Unauthorized.
+
+---
+
+# Reglas de seguridad
+
+- Nunca loggear refresh token.
+- Nunca exponer secretos JWT.
+- No exponer stacktrace.
+- Mantener errores homogéneos.
+- Mantener JWT firmados.
+- Mantener access token corto.
+- Mantener refresh token largo.
+
+---
+
+# Cambios técnicos obligatorios
+
+## AuthService
+
+Debe:
+
+- generar access token
+- generar refresh token
+- exponer método refreshToken(...)
+- construir correctamente LoginResponse
+- construir correctamente RefreshTokenResponse
+
+## JwtService
+
+Debe implementar:
+
+- generateToken(...)
+- generateRefreshToken(...)
+- parseClaims(...)
+- isRefreshToken(...)
+- getRefreshExpirationSeconds()
+
+## LoginResponse
+
+Debe incluir:
+
+- refreshToken
+- refreshExpiresIn
+
+## JwtProperties
+
+Debe incluir:
+
+app.jwt.refresh-expiration-seconds
+
+---
+
+# Testing obligatorio
+
+## Unit tests
+
+Validar:
+
+- generación de refresh token
+- expiración
+- claim tokenType
+- validación criptográfica
+
+## Integration tests
+
+Validar:
+
+- login devuelve refresh token
+- refresh válido retorna 200
+- refresh inválido retorna 401
+- refresh expirado retorna 401
+- access token no funciona como refresh token
+
+---
+
+# Resultado esperado final
+
+La aplicación debe:
+
+- compilar sin errores
+- pasar mvn clean test
+- pasar mvn clean verify
+- mantener compatibilidad con /api/auth/me
+- mantener compatibilidad con login existente
+- exponer documentación OpenAPI correcta

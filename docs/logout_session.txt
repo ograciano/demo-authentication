@@ -1,25 +1,132 @@
-Título: Implementación de Logout seguro para invalidación de sesión
+Título: Flujo obligatorio de logout y revocación de sesión
 
-Descripción:
-Se requiere añadir un endpoint de logout en el microservicio de autenticación para cerrar sesión de forma controlada durante la demo, invalidando tokens de renovación y evitando el uso posterior de la sesión.
+Objetivo funcional:
+Permitir que un usuario cierre sesión invalidando el refresh token asociado para impedir futuras renovaciones JWT.
 
-Objetivo:
-Permitir que el usuario cierre sesión y que el sistema impida renovar tokens asociados a esa sesión.
+---
 
-Alcance funcional:
-- Exponer endpoint `POST /api/auth/logout`.
-- Invalidar o revocar el refresh token asociado.
-- Responder correctamente ante intentos de logout sin sesión válida.
-- Mantener compatibilidad con el flujo actual de login y autenticación JWT.
-- Actualizar OpenAPI y pruebas.
+# Flujo funcional requerido
 
-Criterios de aceptación:
-- Un usuario autenticado puede cerrar sesión correctamente.
-- Tras logout, el refresh token no puede ser reutilizado.
-- El endpoint no expone datos sensibles.
-- El comportamiento queda cubierto por pruebas automatizadas.
+## Logout
 
-Notas técnicas:
-- Definir una estrategia de revocación acorde a la arquitectura actual.
-- Mantener separación entre autenticación de acceso y control de sesión.
-- Alinear el manejo de errores con el resto del servicio.
+Endpoint obligatorio:
+
+POST /api/auth/logout
+
+## Request
+
+{
+  "refreshToken": "jwt-refresh-token"
+}
+
+## Respuesta exitosa
+
+200 OK
+
+{
+  "status": "LOGOUT_SUCCESS"
+}
+
+---
+
+# Comportamiento obligatorio
+
+Después de logout:
+
+- el refresh token NO debe poder reutilizarse
+- el endpoint /api/auth/refresh debe devolver 401
+- la sesión debe considerarse terminada
+
+---
+
+# Validaciones obligatorias
+
+El sistema debe validar:
+
+1. Refresh token firmado.
+2. Refresh token válido.
+3. Usuario existente.
+4. Estado del usuario.
+5. Token no revocado previamente.
+
+---
+
+# Estrategia mínima esperada
+
+La implementación debe dejar preparado un mecanismo de revocación.
+
+Opciones válidas:
+
+- blacklist en memoria
+- persistencia temporal
+- repositorio de tokens revocados
+- estrategia extensible futura
+
+---
+
+# Casos inválidos
+
+## Refresh token inválido
+
+Debe responder 401 Unauthorized.
+
+## Refresh token revocado
+
+Debe responder 401 Unauthorized.
+
+## Payload inválido
+
+Debe responder 400 Bad Request.
+
+---
+
+# Reglas de seguridad
+
+- Nunca loggear refresh token completo.
+- No exponer secretos.
+- No exponer detalles internos JWT.
+- Mantener errores homogéneos.
+- Mantener contratos REST consistentes.
+
+---
+
+# Cambios técnicos obligatorios
+
+## AuthController
+
+Debe implementar:
+
+POST /api/auth/logout
+
+## AuthService
+
+Debe implementar:
+
+- lógica de revocación
+- invalidación de sesión
+- validación de token revocado
+
+## Refresh flow
+
+Debe rechazar tokens revocados.
+
+---
+
+# Testing obligatorio
+
+Validar:
+
+- logout exitoso
+- logout con token inválido
+- refresh posterior a logout retorna 401
+- protección ante reutilización de refresh token
+
+---
+
+# Resultado esperado final
+
+- logout funcional
+- refresh token inutilizable tras logout
+- OpenAPI actualizado
+- pruebas pasando
+- comportamiento consistente con seguridad JWT
