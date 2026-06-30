@@ -1,15 +1,19 @@
 package com.vass.authentication.infrastructure.security;
 
-import com.vass.authentication.config.JwtProperties;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+
 import javax.crypto.SecretKey;
+
 import org.springframework.stereotype.Component;
+
+import com.vass.authentication.config.JwtProperties;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtService {

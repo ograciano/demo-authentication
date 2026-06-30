@@ -1,12 +1,8 @@
 package com.vass.authentication.application.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,17 +16,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.vass.authentication.api.dto.RefreshRequest;
 import com.vass.authentication.api.dto.RefreshResponse;
-import com.vass.authentication.api.dto.LoginRequest;
-import com.vass.authentication.api.dto.LoginResponse;
-import com.vass.authentication.api.dto.RegisterRequest;
-import com.vass.authentication.api.dto.UserResponse;
 import com.vass.authentication.domain.exception.InvalidRefreshTokenException;
-import com.vass.authentication.domain.exception.InvalidCredentialsException;
-import com.vass.authentication.domain.exception.InactiveUserException;
 import com.vass.authentication.infrastructure.integration.AuthorizationServiceClient;
 import com.vass.authentication.infrastructure.persistence.entity.UserEntity;
 import com.vass.authentication.infrastructure.persistence.repository.UserRepository;
 import com.vass.authentication.infrastructure.security.JwtService;
+
 import io.jsonwebtoken.Claims;
 
 @ExtendWith(MockitoExtension.class)
