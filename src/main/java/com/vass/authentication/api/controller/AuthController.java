@@ -2,6 +2,8 @@ package com.vass.authentication.api.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,8 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.vass.authentication.api.dto.ApiErrorResponse;
 import com.vass.authentication.api.dto.LoginRequest;
 import com.vass.authentication.api.dto.LoginResponse;
+import com.vass.authentication.api.dto.MeResponse;
 import com.vass.authentication.api.dto.RegisterRequest;
 import com.vass.authentication.api.dto.RegisterResponse;
+import com.vass.authentication.application.port.in.GetCurrentUserUseCase;
 import com.vass.authentication.application.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,9 +34,11 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final GetCurrentUserUseCase getCurrentUserUseCase;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, GetCurrentUserUseCase getCurrentUserUseCase) {
         this.authService = authService;
+        this.getCurrentUserUseCase = getCurrentUserUseCase;
     }
 
     @PostMapping("/login")
@@ -74,5 +81,24 @@ public class AuthController {
     )
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
+    }
+
+    @GetMapping("/me")
+    @SecurityRequirement(name = "BearerAuth")
+    @Operation(
+            summary = "Introspección del token JWT",
+            description = "Devuelve la identidad y permisos activos del usuario autenticado extraídos del JWT Bearer. Requiere header Authorization: Bearer <token>.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Identidad y permisos del usuario autenticado",
+                            content = @Content(schema = @Schema(implementation = MeResponse.class),
+                                    examples = @ExampleObject(value = "{\"username\":\"demo.user@email.com\",\"permissions\":[\"REPORT:READ\"]}"))),
+                    @ApiResponse(responseCode = "401", description = "Token ausente, inválido o expirado",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Acceso denegado",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
+    )
+    public ResponseEntity<MeResponse> getMe(Authentication authentication) {
+        return ResponseEntity.ok(getCurrentUserUseCase.getCurrentUser(authentication.getName()));
     }
 }

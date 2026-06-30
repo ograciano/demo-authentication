@@ -1,0 +1,26 @@
+Título: Implementación de Refresh Token para demo de autenticación
+
+Descripción:
+Se requiere añadir soporte de refresh token en el microservicio de autenticación para mejorar la experiencia de sesión en la demo. Actualmente el sistema emite JWT de acceso, pero no cuenta con un mecanismo estándar para renovar credenciales sin volver a iniciar sesión.
+
+Objetivo:
+Permitir que un usuario autenticado renueve su access token mediante un refresh token válido, sin exponer credenciales nuevamente.
+
+Alcance funcional:
+- Generar refresh token al momento del login.
+- Exponer endpoint `POST /api/auth/refresh` para renovar el access token.
+- Validar expiración y firma del refresh token.
+- Mantener el access token de corta duración.
+- Alinear el contrato OpenAPI con el nuevo flujo.
+- Agregar pruebas unitarias e integración.
+
+Criterios de aceptación:
+- Un usuario con refresh token válido obtiene un nuevo access token.
+- Un refresh token expirado o inválido devuelve error `401`.
+- El endpoint no expone información sensible.
+- La documentación Swagger/OpenAPI refleja el nuevo contrato.
+
+Notas técnicas:
+- Seguir la arquitectura actual del proyecto.
+- Reutilizar el servicio JWT existente.
+- Aplicar validaciones y manejo de errores consistente.

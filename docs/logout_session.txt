@@ -1,0 +1,25 @@
+Título: Implementación de Logout seguro para invalidación de sesión
+
+Descripción:
+Se requiere añadir un endpoint de logout en el microservicio de autenticación para cerrar sesión de forma controlada durante la demo, invalidando tokens de renovación y evitando el uso posterior de la sesión.
+
+Objetivo:
+Permitir que el usuario cierre sesión y que el sistema impida renovar tokens asociados a esa sesión.
+
+Alcance funcional:
+- Exponer endpoint `POST /api/auth/logout`.
+- Invalidar o revocar el refresh token asociado.
+- Responder correctamente ante intentos de logout sin sesión válida.
+- Mantener compatibilidad con el flujo actual de login y autenticación JWT.
+- Actualizar OpenAPI y pruebas.
+
+Criterios de aceptación:
+- Un usuario autenticado puede cerrar sesión correctamente.
+- Tras logout, el refresh token no puede ser reutilizado.
+- El endpoint no expone datos sensibles.
+- El comportamiento queda cubierto por pruebas automatizadas.
+
+Notas técnicas:
+- Definir una estrategia de revocación acorde a la arquitectura actual.
+- Mantener separación entre autenticación de acceso y control de sesión.
+- Alinear el manejo de errores con el resto del servicio.
