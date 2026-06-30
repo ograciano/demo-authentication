@@ -12,12 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vass.authentication.api.dto.LoginRequest;
 import com.vass.authentication.api.dto.LoginResponse;
+import com.vass.authentication.api.dto.RefreshRequest;
+import com.vass.authentication.api.dto.RefreshResponse;
 import com.vass.authentication.api.dto.RegisterRequest;
 import com.vass.authentication.api.dto.RegisterResponse;
 import com.vass.authentication.api.dto.UserResponse;
 import com.vass.authentication.domain.exception.DuplicateEmailException;
 import com.vass.authentication.domain.exception.InactiveUserException;
 import com.vass.authentication.domain.exception.InvalidCredentialsException;
+import com.vass.authentication.domain.exception.InvalidRefreshTokenException;
 import com.vass.authentication.domain.exception.PermissionBootstrapException;
 import com.vass.authentication.domain.exception.PermissionsServiceException;
 import com.vass.authentication.infrastructure.integration.AuthorizationServiceClient;
@@ -78,14 +81,56 @@ public class AuthService {
         loginAttemptService.resetFailures(request.email());
         List<String> permissions = normalizePermissions(authorizationServiceClient.getPermissionsForUser(user.getId()));
 
-        String token = jwtService.generateToken(user.getEmail(), permissions);
+        String accessToken = jwtService.generateToken(user.getEmail(), permissions);
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
         log.info("event=LOGIN_ATTEMPT result=SUCCESS path=/api/auth/login");
         return new LoginResponse(
                 "Bearer",
-                token,
+                accessToken,
                 jwtService.getExpirationSeconds(),
+                refreshToken,
+                jwtService.getRefreshExpirationSeconds(),
                 new UserResponse(user.getId(), user.getEmail(), user.getName())
         );
+    }
+
+    public RefreshResponse refreshToken(RefreshRequest request) {
+        try {
+            var claims = jwtService.parseClaims(request.refreshToken());
+            if (!jwtService.isRefreshToken(claims)) {
+                throw new InvalidRefreshTokenException("Refresh token inválido");
+            }
+            String subject = claims.getSubject();
+            if (subject == null || subject.isBlank()) {
+                throw new InvalidRefreshTokenException("Refresh token inválido");
+            }
+
+            UserEntity user = userRepository.findByEmailIgnoreCase(subject)
+                    .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token inválido"));
+
+            if (!user.isActive()) {
+                throw new InvalidRefreshTokenException("Refresh token inválido");
+            }
+
+            List<String> permissions = normalizePermissions(authorizationServiceClient.getPermissionsForUser(user.getId()));
+            String newAccessToken = jwtService.generateToken(subject, permissions);
+            String newRefreshToken = jwtService.generateRefreshToken(subject);
+
+            log.info("event=REFRESH_TOKEN result=SUCCESS path=/api/auth/refresh");
+            return new RefreshResponse(
+                    "Bearer",
+                    newAccessToken,
+                    jwtService.getExpirationSeconds(),
+                    newRefreshToken,
+                    jwtService.getRefreshExpirationSeconds()
+            );
+        } catch (InvalidRefreshTokenException ex) {
+            log.info("event=REFRESH_TOKEN result=FAILURE reason=INVALID_REFRESH_TOKEN path=/api/auth/refresh");
+            throw ex;
+        } catch (RuntimeException ex) {
+            log.info("event=REFRESH_TOKEN result=FAILURE reason=INVALID_REFRESH_TOKEN path=/api/auth/refresh");
+            throw new InvalidRefreshTokenException("Refresh token inválido");
+        }
     }
 
     @Transactional

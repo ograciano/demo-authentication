@@ -14,12 +14,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtService {
 
+    private static final String TOKEN_TYPE_CLAIM = "tokenType";
+    private static final String REFRESH_TOKEN_TYPE = "REFRESH";
+
     private final SecretKey secretKey;
     private final long expirationSeconds;
+    private final long refreshExpirationSeconds;
 
     public JwtService(JwtProperties properties) {
         this.secretKey = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
         this.expirationSeconds = properties.expirationSeconds();
+        this.refreshExpirationSeconds = properties.refreshExpirationSeconds();
     }
 
     public String generateToken(String subject, List<String> permissions) {
@@ -34,6 +39,18 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateRefreshToken(String subject) {
+        Instant now = Instant.now();
+        Instant expiration = now.plusSeconds(refreshExpirationSeconds);
+        return Jwts.builder()
+                .subject(subject)
+                .claim(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiration))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
@@ -42,7 +59,15 @@ public class JwtService {
                 .getPayload();
     }
 
+    public boolean isRefreshToken(Claims claims) {
+        return REFRESH_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM, String.class));
+    }
+
     public long getExpirationSeconds() {
         return expirationSeconds;
+    }
+
+    public long getRefreshExpirationSeconds() {
+        return refreshExpirationSeconds;
     }
 }

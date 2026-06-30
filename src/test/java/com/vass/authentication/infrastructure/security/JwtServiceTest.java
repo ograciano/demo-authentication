@@ -1,11 +1,14 @@
 package com.vass.authentication.infrastructure.security;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
+
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
 
 import com.vass.authentication.config.JwtProperties;
+
 import io.jsonwebtoken.Claims;
-import java.util.List;
-import org.junit.jupiter.api.Test;
 
 class JwtServiceTest {
 

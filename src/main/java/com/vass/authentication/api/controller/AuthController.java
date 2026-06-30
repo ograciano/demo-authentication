@@ -13,6 +13,8 @@ import com.vass.authentication.api.dto.ApiErrorResponse;
 import com.vass.authentication.api.dto.LoginRequest;
 import com.vass.authentication.api.dto.LoginResponse;
 import com.vass.authentication.api.dto.MeResponse;
+import com.vass.authentication.api.dto.RefreshRequest;
+import com.vass.authentication.api.dto.RefreshResponse;
 import com.vass.authentication.api.dto.RegisterRequest;
 import com.vass.authentication.api.dto.RegisterResponse;
 import com.vass.authentication.application.port.in.GetCurrentUserUseCase;
@@ -58,6 +60,20 @@ public class AuthController {
                                                HttpServletRequest httpRequest) {
         String clientIp = extractClientIp(httpRequest);
         return ResponseEntity.ok(authService.login(request, clientIp));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Renovación de sesión mediante refresh token",
+            description = "Valida un refresh token válido y emite un nuevo par de access y refresh tokens.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Renovación exitosa", content = @Content(schema = @Schema(implementation = RefreshResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Payload inválido", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "401", description = "Refresh token inválido o expirado", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
+    )
+    public ResponseEntity<RefreshResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
     }
 
     private String extractClientIp(HttpServletRequest request) {

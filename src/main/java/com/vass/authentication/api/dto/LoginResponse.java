@@ -7,6 +7,8 @@ public record LoginResponse(
         @Schema(example = "Bearer") String tokenType,
         @Schema(example = "eyJhbGciOiJIUzI1NiJ9...") String accessToken,
         @Schema(example = "3600") long expiresIn,
+        @Schema(example = "eyJhbGciOiJIUzI1NiJ9...") String refreshToken,
+        @Schema(example = "86400") long refreshExpiresIn,
         UserResponse user
 ) {
 }

@@ -16,6 +16,7 @@ import com.vass.authentication.domain.exception.AccountLockedException;
 import com.vass.authentication.domain.exception.DuplicateEmailException;
 import com.vass.authentication.domain.exception.InactiveUserException;
 import com.vass.authentication.domain.exception.InvalidCredentialsException;
+import com.vass.authentication.domain.exception.InvalidRefreshTokenException;
 import com.vass.authentication.domain.exception.PermissionBootstrapException;
 import com.vass.authentication.domain.exception.RateLimitExceededException;
 
@@ -42,6 +43,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex,
+                                                                      HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex,
                                                                       HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
