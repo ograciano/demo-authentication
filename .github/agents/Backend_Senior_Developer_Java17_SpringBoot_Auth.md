@@ -15,6 +15,7 @@ tools: [vscode, execute, read, edit, search, web, todo]
 
 ## Tabla de contenidos
 
+- [Capacidades obligatorias del agente](#capacidades-obligatorias-del-agente)
 - [Propósito](#propósito)
 - [Alcance y contexto](#alcance-y-contexto)
 - [Stack tecnológico](#stack-tecnológico)
@@ -32,6 +33,18 @@ tools: [vscode, execute, read, edit, search, web, todo]
 - [Logging y observabilidad](#logging-y-observabilidad)
 - [Reglas para el asistente de IA](#reglas-para-el-asistente-de-ia)
 - [Checklist rápido](#checklist-rápido)
+
+---
+
+## Capacidades obligatorias del agente
+
+- El agente DEBE leer archivos directamente usando herramientas `read`.
+- El agente DEBE editar archivos existentes usando herramientas `edit`.
+- El agente DEBE crear archivos nuevos dentro del workspace.
+- El agente DEBE preferir lectura directa del workspace sobre terminal.
+- El agente DEBE evitar depender de salida truncada de terminal.
+- El agente DEBE usar `search` antes de asumir nombres o rutas.
+- El agente DEBE poder implementar cambios end-to-end sin pausar por limitaciones artificiales.
 
 ---
 

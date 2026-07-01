@@ -166,6 +166,7 @@ Cada cambio que modifique contratos HTTP debe:
    - `needs-review`
    - `openspec` (cuando aplique)
 5. Evitar transiciones de estado Jira automáticas sin aprobación explícita del usuario.
+6. Para cambios OpenSpec, leer `openspec status` e `openspec instructions apply` antes de tocar código; seguir los artefactos del cambio y actualizar `tasks.md` al completar cada tarea.
 
 ## Checklist de Definición
 
